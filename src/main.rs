@@ -1,125 +1,44 @@
+pub mod args;
+pub mod map;
+pub mod tile;
+
+use args::*;
 use clap::Parser;
-use owo_colors::OwoColorize;
-use std::fmt;
-
-#[derive(Parser, Debug)]
-#[command(version, long_about = None)]
-struct Args {
-    #[arg(short = 'H', long, default_value_t = 10)]
-    height: u32,
-
-    #[arg(short = 'W', long, default_value_t = 10)]
-    width: u32,
-
-    #[arg(short = 'S', long, default_value_t = Args::get_default_seed())]
-    seed: String,
-}
-
-impl Args {
-    fn get_default_seed() -> String {
-        "xo.~".to_string()
-    }
-}
-
-#[derive(Debug)]
-enum TileType {
-    // red .
-    Desert,
-    // white x
-    Mountain,
-    // green o
-    Forest,
-    // blue ~
-    Water,
-}
-
-impl fmt::Display for TileType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let character = match *self {
-            Self::Desert => ".".red().to_string(),
-            Self::Mountain => "x".white().to_string(),
-            Self::Forest => ".".green().to_string(),
-            Self::Water => ".".blue().to_string(),
-        };
-        write!(f, "{character}")
-    }
-}
-
-#[derive(Debug)]
-struct Tile {
-    tile_type: Option<TileType>,
-    row: u32,
-    column: u32,
-}
-
-impl Tile {
-    fn new(column: u32, row: u32) -> Self {
-        Self {
-            tile_type: None,
-            column,
-            row,
-        }
-    }
-}
-
-impl fmt::Display for Tile {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let character = match &self.tile_type {
-            Some(land) => land.to_string(),
-            None => " ".to_string(),
-        };
-        write!(f, "{character}")
-    }
-}
-
-#[derive(Debug)]
-struct Map {
-    tiles: Vec<Tile>,
-    width: u32,
-    height: u32,
-}
-
-impl Map {
-    fn new(width: u32, height: u32) -> Self {
-        let mut tiles = Vec::<Tile>::new();
-
-        for row in 0..height {
-            for column in 0..width {
-                tiles.push(Tile::new(column, row));
-            }
-        }
-
-        Self {
-            tiles,
-            width,
-            height,
-        }
-    }
-}
-
-impl fmt::Display for Map {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut tiles = String::new();
-
-        for row in 0..self.height {
-            for column in 0..self.width {
-                tiles.push_str(
-                    self.tiles[((row * self.width) + column) as usize]
-                        .to_string()
-                        .as_str(),
-                );
-            }
-
-            tiles.push('\n');
-        }
-        write!(f, "{tiles}")
-    }
-}
+use map::*;
+use rand::seq::SliceRandom;
+use tile::*;
 
 fn main() {
     let args = Args::parse();
 
-    let map = Map::new(args.width, args.height);
+    let mut map = Map::new(args.width, args.height);
+    let mut fill_iterations = 0;
+
+    'fill: loop {
+        for character in args.seed.chars() {
+            let mut filtered_tiles = map
+                .tiles
+                .iter_mut()
+                .filter(|tile| {
+                    // if fill_iterations == 0 {
+                    tile.tile_type.is_none()
+                    // } else {
+                    //     tile.tile_type.is_none() && has_neighbor(tile, character)
+                    // }
+                })
+                .collect::<Vec<&mut Tile>>();
+
+            if filtered_tiles.is_empty() {
+                break 'fill;
+            }
+
+            let mut tile = filtered_tiles.choose_mut(&mut rand::thread_rng()).unwrap();
+
+            tile.tile_type = Some(character);
+        }
+
+        fill_iterations += 1;
+    }
 
     print!("{map}");
 }
