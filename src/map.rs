@@ -1,20 +1,34 @@
 use crate::tile::*;
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Map {
     pub tiles: Vec<Tile>,
-    pub width: u32,
-    pub height: u32,
+    pub width: usize,
+    pub height: usize,
 }
 
 impl Map {
-    pub fn new(width: u32, height: u32) -> Self {
+    pub fn new(width: usize, height: usize) -> Self {
         let mut tiles = Vec::<Tile>::new();
 
-        for row in 0..height {
-            for column in 0..width {
-                tiles.push(Tile::new(column, row));
+        for y in 0..height as usize {
+            for x in 0..width as usize {
+                let mut tile = Tile::new();
+
+                if y > 0 {
+                    tile.north = Some(((y - 1) * width) + x);
+
+                    tiles[((y - 1) * width) + x].south = Some((y * width) + x);
+                }
+
+                if x > 0 {
+                    tile.west = Some((y * width) + x - 1);
+
+                    tiles[(y * width) + x - 1].east = Some((y * width) + x);
+                }
+
+                tiles.push(tile);
             }
         }
 
@@ -30,13 +44,9 @@ impl fmt::Display for Map {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut tiles = String::new();
 
-        for row in 0..self.height {
-            for column in 0..self.width {
-                tiles.push_str(
-                    self.tiles[((row * self.width) + column) as usize]
-                        .to_string()
-                        .as_str(),
-                );
+        for y in 0..self.height {
+            for x in 0..self.width {
+                tiles.push_str(self.tiles[(y * self.width) + x].to_string().as_str());
             }
 
             tiles.push('\n');
